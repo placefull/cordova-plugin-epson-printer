@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    id="cordova-plugin-epsonPrinter"
+    version="0.0.1">
+
+    <name>Cordova-Plugin-Epson-Printer</name>
+
+    <description>Cordova plugin for Epson Printers</description>
+
+    <repo>https://github.com/elizabethrego/cordova-plugin-unimag-swiper.git</repo>
+
+    <keyword>seiko, epson, printer, printing, ePOS-Print, print, ePOS</keyword>
+
+    <license>Apache 2.0 License</license>
+
+    <author>Jordan Matthews</author>
+
+    <!-- cordova -->
+    <engines>
+	  <engine name="cordova" version=">=3.5.0"/>
+    </engines>
+    
+    <!-- dependencies -->
+    <dependency id="cordova-plugin-device" />
+
+    <!-- js -->
+	<js-module src="www/epson-printer.js" name="Epson-Printer">
+		<clobbers target="cordova.plugins.epson.printer" />
+	</js-module>
+
+    <!-- ios -->
+	<platform name="ios">
+		<config-file target="config.xml" parent="/*">
+            <feature name="EpsonPrinter">
+                <param name="ios-package" value="EpsonPrinter" />
+            </feature>
+        </config-file>
+
+		<source-file src="src/ios/libeposprint.a" framework="true" />
+
+		<header-file src="src/ios/ePOSPrint.h" />
+
+		<header-file src="src/ios/ePOSBluetoothConnection.h" />
+		
+		<header-file src="src/ios/EpsonPrinter.h" />
+		
+		<source-file src="src/ios/EpsonPrinter.m" />
+
+        <framework src="ExternalAccessory.framework"/>
+	</platform>
+
+</plugin>
+
