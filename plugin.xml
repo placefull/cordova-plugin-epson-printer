@@ -9,7 +9,7 @@
 
     <description>Cordova plugin for Epson Printers</description>
 
-    <repo>https://github.com/elizabethrego/cordova-plugin-unimag-swiper.git</repo>
+    <repo>https://github.com/jordanmatthews/cordova-plugin-epsonPrinter.git</repo>
 
     <keyword>seiko, epson, printer, printing, ePOS-Print, print, ePOS</keyword>
 
@@ -26,7 +26,7 @@
     <dependency id="cordova-plugin-device" />
 
     <!-- js -->
-	<js-module src="www/epson-printer.js" name="Epson-Printer">
+	<js-module src="www/epsonPrinter.js" name="epsonPrinter">
 		<clobbers target="cordova.plugins.epson.printer" />
 	</js-module>
 
