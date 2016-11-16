@@ -99,7 +99,7 @@ int printerType;
 }
 
 - (void)connect:(CDVInvokedUrlCommand *)command {
-    [self.commandDelegate runInBackground:^{
+    //[self.commandDelegate runInBackground:^{
         CDVPluginResult* plug;
         
         //get open parameter
@@ -122,21 +122,21 @@ int printerType;
             plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         }
         [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-    }];
+    //}];
 }
 
 -(void)createBuilder:(CDVInvokedUrlCommand *)command {
-    [self.commandDelegate runInBackground:^{
+    //[self.commandDelegate runInBackground:^{
         CDVPluginResult* plug;
         if (!builder) {
             builder = [[EposBuilder alloc] initWithPrinterModel:[command.arguments objectAtIndex:0] Lang:EPOS_OC_MODEL_ANK];
+            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
             if(builder == nil){
                 plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not initialize"];
             }
-            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         }
         [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-    }];
+    //}];
     
 }
 
@@ -193,7 +193,7 @@ int printerType;
 
 - (void)addFeedLine:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addFeedLine:(long)[command.arguments objectAtIndex:0]];
+    int result = [builder addFeedLine:(int)[command.arguments objectAtIndex:0]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not add feed line"];
     } else {
@@ -205,7 +205,7 @@ int printerType;
 //(long)width Height:(long)height;
 - (void) addTextSize:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addTextSize:(long)[command.arguments objectAtIndex:0] Height:(long)[command.arguments objectAtIndex:1]];
+    int result = [builder addTextSize:(int)[command.arguments objectAtIndex:0] Height:(int)[command.arguments objectAtIndex:1]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set text size"];
     } else {
@@ -254,7 +254,7 @@ int printerType;
     CDVPluginResult* plug;
     unsigned long status = 0;
     unsigned long battery = 0;
-    int result = [printer sendData:builder Timeout:SEND_TIMEOUT Status:&status Battery:&battery];
+    int result = [printer sendData:builder Timeout:100000 Status:&status Battery:&battery];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not print"];
     } else {
