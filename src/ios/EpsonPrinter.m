@@ -28,6 +28,30 @@ int printerType;
     }
 }
 
+- (int)getBuilderStyle:(int)style {
+	switch(style) {
+		case 1:
+			return EPOS_OC_TRUE;
+		case 2:
+			return EPOS_OC_PARAM_UNSPECIFIED;
+		case 0:
+		default:
+			return EPOS_OC_FALSE;
+	}
+}
+
+- (int)getBuilderColor:(int)color {
+	switch(color) {
+		case 1:
+			return EPOS_OC_COLOR_1;
+		case 2:
+			return EPOS_OC_PARAM_UNSPECIFIED;
+		case 0:
+		default:
+			return EPOS_OC_COLOR_NONE;
+	}
+}
+
 - (int)getBuilderLanguage:(int)lang {
     switch(lang){
         case 1:
@@ -193,7 +217,7 @@ int printerType;
 //(int)reverse Ul:(int)ul Em:(int)em Color:(int)color;
 - (void) addTextStyle:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addTextStyle:(int)[command.arguments objectAtIndex:0] Ul:(int)[command.arguments objectAtIndex:1] Em:(int)[command.arguments objectAtIndex:2] Color:(int)[command.arguments objectAtIndex:3]];
+    int result = [builder addTextStyle:[self getBuilderStyle:(int)[command.arguments objectAtIndex:0]] Ul:[self getBuilderStyle:(int)[command.arguments objectAtIndex:1]] Em:[self getBuilderStyle:(int)[command.arguments objectAtIndex:2]] Color:[self getBuilderColor:(int)[command.arguments objectAtIndex:0]]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set text style"];
     } else {
