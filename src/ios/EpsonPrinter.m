@@ -98,8 +98,12 @@ int printerType;
     }
 }
 
+- (int)convertToInt:(NSNumber *)val {
+    return val.intValue;
+}
+
 - (void)connect:(CDVInvokedUrlCommand *)command {
-    //[self.commandDelegate runInBackground:^{
+    [self.commandDelegate runInBackground:^{
         CDVPluginResult* plug;
         
         //get open parameter
@@ -122,11 +126,11 @@ int printerType;
             plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         }
         [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-    //}];
+    }];
 }
 
 -(void)createBuilder:(CDVInvokedUrlCommand *)command {
-    //[self.commandDelegate runInBackground:^{
+    [self.commandDelegate runInBackground:^{
         CDVPluginResult* plug;
         if (!builder) {
             builder = [[EposBuilder alloc] initWithPrinterModel:[command.arguments objectAtIndex:0] Lang:EPOS_OC_MODEL_ANK];
@@ -136,7 +140,7 @@ int printerType;
             }
         }
         [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-    //}];
+    }];
     
 }
 
@@ -160,7 +164,7 @@ int printerType;
 
 - (void)addTextAlign:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addTextAlign:[self getBuilderAlign:(int)[command.arguments objectAtIndex:0]]];
+    int result = [builder addTextAlign:[self getBuilderAlign:[self convertToInt:[command.arguments objectAtIndex:0]]]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not align text"];
     } else {
@@ -171,7 +175,7 @@ int printerType;
 
 - (void)addTextLang:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addTextLang:[self getBuilderLanguage:(int)[command.arguments objectAtIndex:0]]];
+    int result = [builder addTextLang:[self getBuilderLanguage:[self convertToInt:[command.arguments objectAtIndex:0]]]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set language"];
     } else {
@@ -182,7 +186,7 @@ int printerType;
 
 - (void)addTextSmooth:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addTextSmooth:(int)[command.arguments objectAtIndex:0]];
+    int result = [builder addTextSmooth:(bool)[command.arguments objectAtIndex:0]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set smooth text"];
     } else {
@@ -193,7 +197,7 @@ int printerType;
 
 - (void)addFeedLine:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addFeedLine:(int)[command.arguments objectAtIndex:0]];
+    int result = [builder addFeedLine:[self convertToInt:[command.arguments objectAtIndex:0]]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not add feed line"];
     } else {
@@ -202,10 +206,10 @@ int printerType;
     [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
 }
 
-//(long)width Height:(long)height;
+//(int)width Height:(int)height;
 - (void) addTextSize:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addTextSize:(int)[command.arguments objectAtIndex:0] Height:(int)[command.arguments objectAtIndex:1]];
+    int result = [builder addTextSize:[self convertToInt:[command.arguments objectAtIndex:0]] Height:[self convertToInt:[command.arguments objectAtIndex:1]]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set text size"];
     } else {
@@ -217,7 +221,7 @@ int printerType;
 //(int)reverse Ul:(int)ul Em:(int)em Color:(int)color;
 - (void) addTextStyle:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addTextStyle:[self getBuilderStyle:(int)[command.arguments objectAtIndex:0]] Ul:[self getBuilderStyle:(int)[command.arguments objectAtIndex:1]] Em:[self getBuilderStyle:(int)[command.arguments objectAtIndex:2]] Color:[self getBuilderColor:(int)[command.arguments objectAtIndex:0]]];
+    int result = [builder addTextStyle:[self getBuilderStyle:[self convertToInt:[command.arguments objectAtIndex:0]]] Ul:[self getBuilderStyle:[self convertToInt:[command.arguments objectAtIndex:1]]] Em:[self getBuilderStyle:[self convertToInt:[command.arguments objectAtIndex:2]]] Color:[self getBuilderColor:[self convertToInt:[command.arguments objectAtIndex:0]]]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set text style"];
     } else {
@@ -229,7 +233,7 @@ int printerType;
 //(int)font;
 - (void) addTextFont:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addTextFont:[self getBuilderFont:(int)[command.arguments objectAtIndex:0]]];
+    int result = [builder addTextFont:[self getBuilderFont:[self convertToInt:[command.arguments objectAtIndex:0]]]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set text font"];
     } else {
@@ -241,7 +245,7 @@ int printerType;
 //(int)type;
 - (void) addCut:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addCut:[self getBuilderType:(int)[command.arguments objectAtIndex:0]]];
+    int result = [builder addCut:[self getBuilderType:[self convertToInt:[command.arguments objectAtIndex:0]]]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not cut"];
     } else {
@@ -254,7 +258,7 @@ int printerType;
     CDVPluginResult* plug;
     unsigned long status = 0;
     unsigned long battery = 0;
-    int result = [printer sendData:builder Timeout:100000 Status:&status Battery:&battery];
+    int result = [printer sendData:builder Timeout:SEND_TIMEOUT Status:&status Battery:&battery];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not print"];
     } else {
