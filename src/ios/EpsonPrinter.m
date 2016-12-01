@@ -98,6 +98,82 @@ int printerType;
     }
 }
 
+- (int)getSymbolType:(int)type {
+    switch(type){
+        case 1:
+            return EPOS_OC_SYMBOL_PDF417_TRUNCATED;
+        case 2:
+            return EPOS_OC_SYMBOL_QRCODE_MODEL_1;
+        case 3:
+            return EPOS_OC_SYMBOL_QRCODE_MODEL_2;
+        case 4:
+            return EPOS_OC_SYMBOL_MAXICODE_MODE_2;
+        case 5:
+            return EPOS_OC_SYMBOL_MAXICODE_MODE_3;
+        case 6:
+            return EPOS_OC_SYMBOL_MAXICODE_MODE_4;
+        case 7:
+            return EPOS_OC_SYMBOL_MAXICODE_MODE_5;
+        case 8:
+            return EPOS_OC_SYMBOL_MAXICODE_MODE_6;
+        case 9:
+            return EPOS_OC_SYMBOL_GS1_DATABAR_STACKED;
+        case 10:
+            return EPOS_OC_SYMBOL_GS1_DATABAR_STACKED_OMNIDIRECTIONAL;
+        case 11:
+            return EPOS_OC_SYMBOL_GS1_DATABAR_EXPANDED_STACKED;
+        case 12:
+            return EPOS_OC_SYMBOL_AZTECCODE_FULLRANGE;
+        case 13:
+            return EPOS_OC_SYMBOL_AZTECCODE_COMPACT;
+        case 14:
+            return EPOS_OC_SYMBOL_DATAMATRIX_SQUARE;
+        case 15:
+            return EPOS_OC_SYMBOL_DATAMATRIX_RECTANGLE_8;
+        case 16:
+            return EPOS_OC_SYMBOL_DATAMATRIX_RECTANGLE_12;
+        case 17:
+            return EPOS_OC_SYMBOL_DATAMATRIX_RECTANGLE_16;
+        case 0:
+        default:
+            return EPOS_OC_SYMBOL_PDF417_STANDARD;
+    }
+}
+
+- (int)getSymbolLevel:(int)level {
+    switch(level) {
+        case 0:
+            return EPOS_OC_LEVEL_0;
+        case 1:
+            return EPOS_OC_LEVEL_1;
+        case 2:
+            return EPOS_OC_LEVEL_2;
+        case 3:
+            return EPOS_OC_LEVEL_3;
+        case 4:
+            return EPOS_OC_LEVEL_4;
+        case 5:
+            return EPOS_OC_LEVEL_5;
+        case 6:
+            return EPOS_OC_LEVEL_6;
+        case 7:
+            return EPOS_OC_LEVEL_7;
+        case 8:
+            return EPOS_OC_LEVEL_8;
+        case 9:
+            return EPOS_OC_LEVEL_L;
+        case 10:
+            return EPOS_OC_LEVEL_M;
+        case 11:
+            return EPOS_OC_LEVEL_Q;
+        case 12:
+            return EPOS_OC_LEVEL_H;
+        case 13:
+        default:
+            return EPOS_OC_LEVEL_DEFAULT;
+    }
+}
+
 - (int)convertToInt:(NSNumber *)val {
     return val.intValue;
 }
@@ -121,12 +197,25 @@ int printerType;
         }
         int result = [printer openPrinter:printerType DeviceName:ipAddress];
         if(result != EPOS_OC_SUCCESS) {
-            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could open printer at that port"];
+            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not open printer at that port"];
         } else {
             plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         }
         [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
     }];
+}
+
+- (void)getStatus:(CDVInvokedUrlCommand *)command {
+    CDVPluginResult* plug;
+    unsigned long status = 0;
+    unsigned long battery = 0;
+    int result = [printer getStatus:&status Battery:&battery];
+    if(result != EPOS_OC_SUCCESS){
+        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Not connected"];
+    } else {
+        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    }
+    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
 }
 
 -(void)createBuilder:(CDVInvokedUrlCommand *)command {
@@ -167,6 +256,17 @@ int printerType;
     int result = [builder addTextAlign:[self getBuilderAlign:[self convertToInt:[command.arguments objectAtIndex:0]]]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not align text"];
+    } else {
+        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    }
+    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
+}
+
+- (void)addSymbol:(CDVInvokedUrlCommand *)command {
+    CDVPluginResult* plug;
+    int result = [builder addSymbol:[command.arguments objectAtIndex:0] Type:[self getSymbolType:[self convertToInt:[command.arguments objectAtIndex:1]]] Level:[self getSymbolLevel:[self convertToInt:[command.arguments objectAtIndex:2]]] Width:EPOS_OC_PARAM_UNSPECIFIED Height:EPOS_OC_PARAM_UNSPECIFIED Size:[self convertToInt:[command.arguments objectAtIndex:2]]];
+    if(result != EPOS_OC_SUCCESS){
+        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not add symbol"];
     } else {
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     }

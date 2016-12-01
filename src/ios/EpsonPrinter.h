@@ -16,7 +16,8 @@
 - (void) addTextFont:(CDVInvokedUrlCommand *)command; //(int)font;
 - (void) addCut:(CDVInvokedUrlCommand *)command; //(int)type;
 - (void) sendToPrinter:(CDVInvokedUrlCommand *)command;
-
+- (void) addSymbol:(CDVInvokedUrlCommand *)command;
+- (void) getStatus:(CDVInvokedUrlCommand *)command;
 /*
 - (int) addTextLineSpace:(long)linespc;
 - (int) addTextRotate:(int)rotate;
