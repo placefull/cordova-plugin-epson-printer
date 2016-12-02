@@ -33,6 +33,10 @@ Printer.createBuilder = function (model, success, error) {
     exec(success, error, 'EpsonPrinter', 'createBuilder', [model]);
 };
 
+Printer.getStatus = function (success, error) {
+    exec(success, error, 'EpsonPrinter', 'getStatus', []);
+};
+
 Printer.removeBuilder = function (success, error) {
     exec(success, error, 'EpsonPrinter', 'removeBuilder', []);
 };
@@ -51,6 +55,10 @@ Printer.addTextAlign = function (align, success, error) {
 Printer.addTextLang = function (lang, success, error) {
     exec(success, error, 'EpsonPrinter', 'addTextLang', [lang]);
 };
+
+Printer.addSymbol = function (address, type, level, size, success, error) {
+    exec(success, error, 'EpsonPrinter', 'addSymbol', [address, type, level, size]);
+}
 
 //need to pass in boolean for text smoothing
 Printer.addTextSmooth = function (smooth, success, error) {
