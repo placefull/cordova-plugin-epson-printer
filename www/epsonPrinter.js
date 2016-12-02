@@ -33,8 +33,8 @@ Printer.createBuilder = function (model, success, error) {
     exec(success, error, 'EpsonPrinter', 'createBuilder', [model]);
 };
 
-Printer.getStatus = function (success, error) {
-    exec(success, error, 'EpsonPrinter', 'getStatus', []);
+Printer.getStatus = function (model, success, error) {
+    exec(success, error, 'EpsonPrinter', 'getStatus', [model]);
 };
 
 Printer.removeBuilder = function (success, error) {
