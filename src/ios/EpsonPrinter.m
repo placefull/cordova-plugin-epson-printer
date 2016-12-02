@@ -178,6 +178,10 @@ int printerType;
     return val.intValue;
 }
 
+- (long)convertToLong:(NSNumber *)val {
+    return val.longValue;
+}
+
 - (void)connect:(CDVInvokedUrlCommand *)command {
     [self.commandDelegate runInBackground:^{
         CDVPluginResult* plug;
@@ -269,7 +273,12 @@ int printerType;
 
 - (void)addSymbol:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug;
-    int result = [builder addSymbol:[command.arguments objectAtIndex:0] Type:[self getSymbolType:[self convertToInt:[command.arguments objectAtIndex:1]]] Level:[self getSymbolLevel:[self convertToInt:[command.arguments objectAtIndex:2]]] Width:EPOS_OC_PARAM_UNSPECIFIED Height:EPOS_OC_PARAM_UNSPECIFIED Size:[self convertToInt:[command.arguments objectAtIndex:2]]];
+    int result = [builder addSymbol:[command.arguments objectAtIndex:0]
+                               Type:[self getSymbolType:[self convertToInt:[command.arguments objectAtIndex:1]]]
+                              Level:[self getSymbolLevel:[self convertToInt:[command.arguments objectAtIndex:2]]]
+                              Width:(long)[self convertToLong:[command.arguments objectAtIndex:3]]
+                             Height:(long)[self convertToLong:[command.arguments objectAtIndex:4]]
+                               Size:(long)[self convertToLong:[command.arguments objectAtIndex:5]]];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not add symbol"];
     } else {
