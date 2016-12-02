@@ -209,12 +209,17 @@ int printerType;
     CDVPluginResult* plug;
     unsigned long status = 0;
     unsigned long battery = 0;
-    int result = [printer getStatus:&status Battery:&battery];
+    EposBuilder *builder2 = [[EposBuilder alloc] initWithPrinterModel:[command.arguments objectAtIndex:0] Lang:EPOS_OC_MODEL_ANK];
+    if(builder2 == nil){
+        return ;
+    }
+    int result = [printer sendData:builder2 Timeout:0 Status:&status Battery:&battery];
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Not connected"];
     } else {
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     }
+    [builder2 clearCommandBuffer];
     [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
 }
 
