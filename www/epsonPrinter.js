@@ -56,8 +56,8 @@ Printer.addTextLang = function (lang, success, error) {
     exec(success, error, 'EpsonPrinter', 'addTextLang', [lang]);
 };
 
-Printer.addSymbol = function (address, type, level, size, success, error) {
-    exec(success, error, 'EpsonPrinter', 'addSymbol', [address, type, level, size]);
+Printer.addSymbol = function (address, type, level, width, height, size, success, error) {
+    exec(success, error, 'EpsonPrinter', 'addSymbol', [address, type, level, width, height, size]);
 }
 
 //need to pass in boolean for text smoothing
