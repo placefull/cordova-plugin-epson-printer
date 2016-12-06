@@ -9,6 +9,7 @@
 #import "EpsonPrinter.h"
 
 #define SEND_TIMEOUT    10 * 1000
+#define STATUS_SUCCESS 16777220
 
 @implementation EpsonPrinter
 
@@ -210,21 +211,22 @@ int printerType;
 }
 
 - (void)getStatus:(CDVInvokedUrlCommand *)command {
+    //takes a long time if not sucessfull
     CDVPluginResult* plug;
     unsigned long status = 0;
     unsigned long battery = 0;
     EposBuilder *builder2 = [[EposBuilder alloc] initWithPrinterModel:[command.arguments objectAtIndex:0] Lang:EPOS_OC_MODEL_ANK];
-    if(builder2 == nil){
-        return ;
-    }
-    int result = EPOS_OC_ERR_FAILURE;
-    if(printer != nil) {
-        result = [printer sendData:builder2 Timeout:10000 Status:&status Battery:&battery];
-    }
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Not connected"];
-    } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Not connected"];
+    if(builder2 != nil){
+        int result = EPOS_OC_SUCCESS;
+        if(printer != nil) {
+            result = [printer getStatus:&status Battery:&battery];
+            if (result == EPOS_OC_SUCCESS) {
+                if (status == STATUS_SUCCESS) {
+                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+                }
+            }
+        }
     }
     [builder2 clearCommandBuffer];
     builder2 = nil;
@@ -249,6 +251,7 @@ int printerType;
 - (void) removeBuilder:(CDVInvokedUrlCommand *)command {
     CDVPluginResult* plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [builder clearCommandBuffer];
+    builder = nil;
     [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
     
 }
