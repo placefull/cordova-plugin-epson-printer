@@ -41,6 +41,10 @@ Printer.removeBuilder = function (success, error) {
     exec(success, error, 'EpsonPrinter', 'removeBuilder', []);
 };
 
+Printer.removePrinter = function (success, error) {
+    exec(success, error, 'EpsonPrinter', 'removePrinter', []);
+}
+
 //need to pass the string to add text
 Printer.addText = function (text, success, error) {
     exec(success, error, 'EpsonPrinter', 'addText', [text]);
