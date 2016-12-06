@@ -217,13 +217,17 @@ int printerType;
     if(builder2 == nil){
         return ;
     }
-    int result = [printer sendData:builder2 Timeout:0 Status:&status Battery:&battery];
+    int result = EPOS_OC_ERR_FAILURE;
+    if(printer != nil) {
+        result = [printer sendData:builder2 Timeout:10000 Status:&status Battery:&battery];
+    }
     if(result != EPOS_OC_SUCCESS){
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Not connected"];
     } else {
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     }
     [builder2 clearCommandBuffer];
+    builder2 = nil;
     [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
 }
 
