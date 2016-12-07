@@ -18,6 +18,8 @@
 - (void) sendToPrinter:(CDVInvokedUrlCommand *)command;
 - (void) addSymbol:(CDVInvokedUrlCommand *)command;
 - (void) getStatus:(CDVInvokedUrlCommand *)command;
+- (void) removePrinter:(CDVInvokedUrlCommand *)command;
+
 /*
 - (int) addTextLineSpace:(long)linespc;
 - (int) addTextRotate:(int)rotate;

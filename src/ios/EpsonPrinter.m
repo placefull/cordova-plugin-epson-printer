@@ -202,6 +202,8 @@ int printerType;
         }
         int result = [printer openPrinter:printerType DeviceName:ipAddress];
         if(result != EPOS_OC_SUCCESS) {
+            [printer closePrinter];
+            printer = nil;
             plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not open printer at that port"];
         } else {
             plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
@@ -254,6 +256,13 @@ int printerType;
     builder = nil;
     [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
     
+}
+
+- (void) removePrinter:(CDVInvokedUrlCommand *)command {
+    CDVPluginResult* plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [printer closePrinter];
+    printer = nil;
+    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
 }
 
 - (void)addText:(CDVInvokedUrlCommand *)command {
