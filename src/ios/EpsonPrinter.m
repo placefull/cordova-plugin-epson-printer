@@ -191,6 +191,9 @@ int printerType;
         if(ipAddress == nil || ipAddress.length == 0){
             plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
         }
+		if (printer) {
+			[printer closePrinter];
+		}
         printer = nil;
         if (!printer) {
             printer = [[EposPrint alloc] init];
