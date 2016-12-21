@@ -9,7 +9,6 @@
 #import "EpsonPrinter.h"
 
 #define SEND_TIMEOUT    10 * 1000
-#define STATUS_SUCCESS 16777220
 
 @implementation EpsonPrinter
 
