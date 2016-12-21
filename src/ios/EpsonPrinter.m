@@ -224,7 +224,17 @@ int printerType;
         if(printer != nil) {
             result = [printer getStatus:&status Battery:&battery];
             if (result == EPOS_OC_SUCCESS) {
-                if (status == STATUS_SUCCESS) {
+                if ((status & EPOS_OC_ST_COVER_OPEN) == EPOS_OC_ST_COVER_OPEN) {
+                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"The cover is open"];
+                } else if ((status & EPOS_OC_ST_NO_RESPONSE) == EPOS_OC_ST_NO_RESPONSE) {
+                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"No response from printer"];
+                } else if ((status & EPOS_OC_ST_OFF_LINE) == EPOS_OC_ST_OFF_LINE) {
+                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Printer is off line"];
+                } else if (((status & EPOS_OC_ST_PAPER_FEED) == EPOS_OC_ST_PAPER_FEED) || ((status & EPOS_OC_ST_RECEIPT_END) == EPOS_OC_ST_RECEIPT_END) || ((status & EPOS_OC_ST_WRONG_PAPER) == EPOS_OC_ST_WRONG_PAPER)) {
+                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Problem with the paper"];
+                } else if (((status & EPOS_OC_ST_BATTERY_OVERHEAT) == EPOS_OC_ST_BATTERY_OVERHEAT) || ((status & EPOS_OC_ST_WAIT_ON_LINE) == EPOS_OC_ST_WAIT_ON_LINE) || ((status & EPOS_OC_ST_PANEL_SWITCH) == EPOS_OC_ST_PANEL_SWITCH) || ((status & EPOS_OC_ST_MECHANICAL_ERR) == EPOS_OC_ST_MECHANICAL_ERR) || ((status & EPOS_OC_ST_AUTOCUTTER_ERR) == EPOS_OC_ST_AUTOCUTTER_ERR) || ((status & EPOS_OC_ST_UNRECOVER_ERR) == EPOS_OC_ST_UNRECOVER_ERR) || ((status & EPOS_OC_ST_AUTORECOVER_ERR) == EPOS_OC_ST_AUTORECOVER_ERR) || ((status & EPOS_OC_ST_HEAD_OVERHEAT) == EPOS_OC_ST_HEAD_OVERHEAT) || ((status & EPOS_OC_ST_MOTOR_OVERHEAT) == EPOS_OC_ST_MOTOR_OVERHEAT)) {
+                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Something went wrong with the printer"];
+                } else {
                     plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
                 }
             }
