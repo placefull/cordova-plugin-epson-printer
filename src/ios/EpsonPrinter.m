@@ -208,6 +208,9 @@ int printerType;
             printer = nil;
             plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not open printer at that port"];
         } else {
+            //save the IP locally
+            NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];
+            [prefs setValue:ipAddress forKey:@"ip"];
             plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         }
         [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
@@ -402,7 +405,19 @@ int printerType;
     unsigned long battery = 0;
     int result = [printer sendData:builder Timeout:SEND_TIMEOUT Status:&status Battery:&battery];
     if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not print"];
+        //try again, by getting the ip from prefs and rebuilding printer object
+        if (printer) {
+            [printer closePrinter];
+        }
+        NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];
+        NSString *ip = [prefs stringForKey:@"ip"];
+        int result2 = [printer openPrinter:printerType DeviceName:ip];
+        if(result2 != EPOS_OC_SUCCESS){
+            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not print"];
+        } else {
+            result2 = [printer sendData:builder Timeout:SEND_TIMEOUT Status:&status Battery:&battery];
+            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        }
     } else {
         plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     }
