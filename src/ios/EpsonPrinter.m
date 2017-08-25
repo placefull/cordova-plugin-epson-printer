@@ -1,428 +1,511 @@
-//
-//  EpsonPrinter.m
-//  POSaBit Testing
-//
-//  Created by Jordan Matthews on 11/11/16.
-//
-//
+/********* EpsonPrinter.m Cordova Plugin Implementation *******/
 
-#import "EpsonPrinter.h"
+#import <Cordova/CDV.h>
+#import "ePOS2.h"
+#import "ePOSEasySelect.h"
 
-#define SEND_TIMEOUT    10 * 1000
+
+// Custom definitions, linked with PF.PrinterStatus in Common.js
+enum PrinterStatus : int {
+	PRINTER_STATUS_CONNECTED = 0,
+    PRINTER_STATUS_NULL_PRINTER = 1,
+    PRINTER_STATUS_NOT_CONNECTED = 2,
+    PRINTER_STATUS_NOT_ONLINE = 3,
+    PRINTER_STATUS_BATTERY_ERROR = 4, 
+    PRINTER_STATUS_PAPER_ERROR = 5, 
+    PRINTER_STATUS_INITIALIZING = 6
+};
+
+enum PrinterInitializingStatus : int {
+	PRINTER_INIT_STATUS_NOT_INITIALIZED = 0,
+    PRINTER_INIT_STATUS_INITIALIZING = 1,
+    PRINTER_INIT_STATUS_CONNECTED = 2,
+};
+//
+@interface EpsonPrinter : CDVPlugin <Epos2DiscoveryDelegate, Epos2PtrStatusChangeDelegate>
+{
+  	Epos2Printer *printer_;
+    Epos2FilterOption *filterOption_;
+    NSMutableArray *printerList_;
+    int printerConnection;
+	int printerInitializingStatus; // 0 not initialize, 1 initializing, 2 connected
+}
+
+@end
 
 @implementation EpsonPrinter
 
-EposPrint* printer;
-EposBuilder *builder;
-int printerType;
-
-- (int)getBuilderAlign:(int)align {
-    switch(align){
-        case 1:
-            return EPOS_OC_ALIGN_CENTER;
-        case 2:
-            return EPOS_OC_ALIGN_RIGHT;
-        case 0:
-        default:
-            return EPOS_OC_ALIGN_LEFT;
-    }
+- (void) startMonitoring:(CDVInvokedUrlCommand *)command
+{
+    CDVPluginResult* pluginResult = nil;
+    [printer_ setStatusChangeEventDelegate:self];
+	[printer_ setInterval:3000];
+	int result = [printer_ startMonitor];
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not start monitoring for printer"];
+    } else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+	
 }
 
-- (int)getBuilderStyle:(int)style {
-	switch(style) {
-		case 1:
-			return EPOS_OC_TRUE;
-		case 2:
-			return EPOS_OC_PARAM_UNSPECIFIED;
-		case 0:
+- (void) stopMonitoring:(CDVInvokedUrlCommand *)command
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ stopMonitor];
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not stop monitoring for printer"];
+    } else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+	
+}
+
+-(void) onPtrStatusChange:(Epos2Printer *)printerObj eventType:(int)eventType
+{
+	switch (eventType) {
+		case EPOS2_EVENT_ONLINE:
+			break;
+		case EPOS2_EVENT_OFFLINE:
+			break;
+		case EPOS2_EVENT_POWER_OFF:
+			break;
+		case EPOS2_EVENT_COVER_CLOSE:
+			break;
+		case EPOS2_EVENT_COVER_OPEN:
+			break;
+		case EPOS2_EVENT_PAPER_OK:
+			break;
+		case EPOS2_EVENT_PAPER_NEAR_END:
+			break;
+		case EPOS2_EVENT_PAPER_EMPTY:
+			break;
+		case EPOS2_EVENT_DRAWER_HIGH:
+			break;
+		case EPOS2_EVENT_DRAWER_LOW:
+			break;
+		case EPOS2_EVENT_BATTERY_ENOUGH:
+			break;
+		case EPOS2_EVENT_BATTERY_EMPTY:
+			break;
 		default:
-			return EPOS_OC_FALSE;
+			break;
 	}
 }
 
-- (int)getBuilderColor:(int)color {
-	switch(color) {
-		case 1:
-			return EPOS_OC_COLOR_1;
-		case 2:
-			return EPOS_OC_PARAM_UNSPECIFIED;
-		case 0:
-		default:
-			return EPOS_OC_COLOR_NONE;
-	}
-}
+- (void) initializePrinter:(CDVInvokedUrlCommand *)command
+{
+    CDVPluginResult* pluginResult = nil;
+	//pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    if (printer_ == nil) {
+		printerInitializingStatus = PRINTER_INIT_STATUS_INITIALIZING;
 
-- (int)getBuilderLanguage:(int)lang {
-    switch(lang){
-        case 1:
-            return EPOS_OC_LANG_JA;
-        case 2:
-            return EPOS_OC_LANG_ZH_CN;
-        case 3:
-            return EPOS_OC_LANG_ZH_TW;
-        case 4:
-            return EPOS_OC_LANG_KO;
-        case 5:
-            return EPOS_OC_LANG_TH;
-        case 6:
-            return EPOS_OC_LANG_VI;
-        case 0:
-        default:
-            return EPOS_OC_LANG_EN;
-    }
-}
-
-- (int)getBuilderFont:(int)font {
-    switch(font){
-        case 1:
-            return EPOS_OC_FONT_B;
-        case 2:
-            return EPOS_OC_FONT_C;
-        case 3:
-            return EPOS_OC_FONT_D;
-        case 4:
-            return EPOS_OC_FONT_E;
-        case 0:
-        default:
-            return EPOS_OC_FONT_A;
-    }
-}
-
-- (int)getBuilderType:(int)cut {
-    switch(cut){
-        case 1:
-            return EPOS_OC_CUT_FEED;
-        case 0:
-        default:
-            return EPOS_OC_CUT_NO_FEED;
-    }
-}
-
-- (int)getSymbolType:(int)type {
-    switch(type){
-        case 1:
-            return EPOS_OC_SYMBOL_PDF417_TRUNCATED;
-        case 2:
-            return EPOS_OC_SYMBOL_QRCODE_MODEL_1;
-        case 3:
-            return EPOS_OC_SYMBOL_QRCODE_MODEL_2;
-        case 4:
-            return EPOS_OC_SYMBOL_MAXICODE_MODE_2;
-        case 5:
-            return EPOS_OC_SYMBOL_MAXICODE_MODE_3;
-        case 6:
-            return EPOS_OC_SYMBOL_MAXICODE_MODE_4;
-        case 7:
-            return EPOS_OC_SYMBOL_MAXICODE_MODE_5;
-        case 8:
-            return EPOS_OC_SYMBOL_MAXICODE_MODE_6;
-        case 9:
-            return EPOS_OC_SYMBOL_GS1_DATABAR_STACKED;
-        case 10:
-            return EPOS_OC_SYMBOL_GS1_DATABAR_STACKED_OMNIDIRECTIONAL;
-        case 11:
-            return EPOS_OC_SYMBOL_GS1_DATABAR_EXPANDED_STACKED;
-        case 12:
-            return EPOS_OC_SYMBOL_AZTECCODE_FULLRANGE;
-        case 13:
-            return EPOS_OC_SYMBOL_AZTECCODE_COMPACT;
-        case 14:
-            return EPOS_OC_SYMBOL_DATAMATRIX_SQUARE;
-        case 15:
-            return EPOS_OC_SYMBOL_DATAMATRIX_RECTANGLE_8;
-        case 16:
-            return EPOS_OC_SYMBOL_DATAMATRIX_RECTANGLE_12;
-        case 17:
-            return EPOS_OC_SYMBOL_DATAMATRIX_RECTANGLE_16;
-        case 0:
-        default:
-            return EPOS_OC_SYMBOL_PDF417_STANDARD;
-    }
-}
-
-- (int)getSymbolLevel:(int)level {
-    switch(level) {
-        case 0:
-            return EPOS_OC_LEVEL_0;
-        case 1:
-            return EPOS_OC_LEVEL_1;
-        case 2:
-            return EPOS_OC_LEVEL_2;
-        case 3:
-            return EPOS_OC_LEVEL_3;
-        case 4:
-            return EPOS_OC_LEVEL_4;
-        case 5:
-            return EPOS_OC_LEVEL_5;
-        case 6:
-            return EPOS_OC_LEVEL_6;
-        case 7:
-            return EPOS_OC_LEVEL_7;
-        case 8:
-            return EPOS_OC_LEVEL_8;
-        case 9:
-            return EPOS_OC_LEVEL_L;
-        case 10:
-            return EPOS_OC_LEVEL_M;
-        case 11:
-            return EPOS_OC_LEVEL_Q;
-        case 12:
-            return EPOS_OC_LEVEL_H;
-        case 13:
-        default:
-            return EPOS_OC_LEVEL_DEFAULT;
-    }
-}
-
-- (int)convertToInt:(NSNumber *)val {
-    return val.intValue;
-}
-
-- (long)convertToLong:(NSNumber *)val {
-    return val.longValue;
-}
-
-- (void)connect:(CDVInvokedUrlCommand *)command {
-    [self.commandDelegate runInBackground:^{
-        CDVPluginResult* plug;
+		printerConnection = [[command.arguments objectAtIndex:0] integerValue]; // 0 WIFI, 1 BLUETOOTH
+		
+        if (printerConnection == 1) {
+            printer_ = [[Epos2Printer alloc] initWithPrinterSeries:EPOS2_TM_M30 lang:EPOS2_MODEL_ANK];
+			if (printer_ == nil) {
+				pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not initialize printer"];
+			} else {
+				pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+			}
+        }
         
-        //get open parameter
-        NSString* ipAddress = [command.arguments objectAtIndex:0];
-        if(ipAddress == nil || ipAddress.length == 0){
-            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
-        }
-		if (printer) {
-			[printer closePrinter];
+        else if (printerConnection == 0) {
+            printer_ = [[Epos2Printer alloc] initWithPrinterSeries:EPOS2_TM_T88 lang:EPOS2_MODEL_ANK];
+			if (printer_ == nil) {
+				pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not initialize printer"];
+			} else {
+				pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+			}
+        } else {
+			pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was nil"];
 		}
-        printer = nil;
-        if (!printer) {
-            printer = [[EposPrint alloc] init];
-            printerType = EPOS_OC_DEVTYPE_TCP;
-            if(printer == nil){
-                plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not initialize"];
-            }
-        }
-        int result = [printer openPrinter:printerType DeviceName:ipAddress];
-        if(result != EPOS_OC_SUCCESS) {
-            [printer closePrinter];
-            printer = nil;
-            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not open printer at that port"];
+    }
+    
+	//[printer_ setReceiveEventDelegate:self];
+	filterOption_ = nil;
+    filterOption_ = [[Epos2FilterOption alloc] init];
+	printerList_ = nil;
+    printerList_ = [[NSMutableArray alloc] init];
+    
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+-(void) deinitializePrinter:(CDVInvokedUrlCommand *)command
+{
+	printer_ = nil;
+	printerConnection = nil;
+	printerInitializingStatus = PRINTER_INIT_STATUS_NOT_INITIALIZED;
+}
+
+- (void) clearCommandBuffer:(CDVInvokedUrlCommand *)command
+{
+	CDVPluginResult* pluginResult = nil;
+	int result = nil;
+	if (printer_ == nil) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not clear command buffer, printer is nil"];
+    } else {
+		result = [printer_ clearCommandBuffer];
+		if (result != EPOS2_SUCCESS) {
+			pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not clear command buffer for printer"];
         } else {
-            //save the IP locally
-            NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];
-            [prefs setValue:ipAddress forKey:@"ip"];
-            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-        }
-        [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-    }];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+		}
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+
 }
 
-- (void)getStatus:(CDVInvokedUrlCommand *)command {
-    //takes a long time if not sucessfull
-    CDVPluginResult* plug;
-    unsigned long status = 0;
-    unsigned long battery = 0;
-    EposBuilder *builder2 = [[EposBuilder alloc] initWithPrinterModel:[command.arguments objectAtIndex:0] Lang:EPOS_OC_MODEL_ANK];
-    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Not connected"];
-    if(builder2 != nil){
-        int result = EPOS_OC_SUCCESS;
-        if(printer != nil) {
-            result = [printer getStatus:&status Battery:&battery];
-            if (result == EPOS_OC_SUCCESS) {
-                if ((status & EPOS_OC_ST_COVER_OPEN) == EPOS_OC_ST_COVER_OPEN) {
-                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"The cover is open"];
-                } else if ((status & EPOS_OC_ST_NO_RESPONSE) == EPOS_OC_ST_NO_RESPONSE) {
-                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"No response from printer"];
-                } else if ((status & EPOS_OC_ST_OFF_LINE) == EPOS_OC_ST_OFF_LINE) {
-                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Printer is off line"];
-                } else if (((status & EPOS_OC_ST_PAPER_FEED) == EPOS_OC_ST_PAPER_FEED) || ((status & EPOS_OC_ST_RECEIPT_END) == EPOS_OC_ST_RECEIPT_END) || ((status & EPOS_OC_ST_WRONG_PAPER) == EPOS_OC_ST_WRONG_PAPER)) {
-                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Problem with the paper"];
-                } else if (((status & EPOS_OC_ST_BATTERY_OVERHEAT) == EPOS_OC_ST_BATTERY_OVERHEAT) || ((status & EPOS_OC_ST_WAIT_ON_LINE) == EPOS_OC_ST_WAIT_ON_LINE) || ((status & EPOS_OC_ST_PANEL_SWITCH) == EPOS_OC_ST_PANEL_SWITCH) || ((status & EPOS_OC_ST_MECHANICAL_ERR) == EPOS_OC_ST_MECHANICAL_ERR) || ((status & EPOS_OC_ST_AUTOCUTTER_ERR) == EPOS_OC_ST_AUTOCUTTER_ERR) || ((status & EPOS_OC_ST_UNRECOVER_ERR) == EPOS_OC_ST_UNRECOVER_ERR) || ((status & EPOS_OC_ST_AUTORECOVER_ERR) == EPOS_OC_ST_AUTORECOVER_ERR) || ((status & EPOS_OC_ST_HEAD_OVERHEAT) == EPOS_OC_ST_HEAD_OVERHEAT) || ((status & EPOS_OC_ST_MOTOR_OVERHEAT) == EPOS_OC_ST_MOTOR_OVERHEAT)) {
-                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Something went wrong with the printer"];
-                } else {
-                    plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-                }
-            }
-        }
-    }
-    [builder2 clearCommandBuffer];
-    builder2 = nil;
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
--(void)createBuilder:(CDVInvokedUrlCommand *)command {
-    [self.commandDelegate runInBackground:^{
-        CDVPluginResult* plug;
-        if (!builder) {
-            builder = [[EposBuilder alloc] initWithPrinterModel:[command.arguments objectAtIndex:0] Lang:EPOS_OC_MODEL_ANK];
-            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-            if(builder == nil){
-                plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not initialize"];
-            }
-        }
-        [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-    }];
-    
-}
-
-- (void) removeBuilder:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [builder clearCommandBuffer];
-    builder = nil;
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-    
-}
-
-- (void) removePrinter:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [printer closePrinter];
-    printer = nil;
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
-- (void)addText:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    int result = [builder addText:[command.arguments objectAtIndex:0]];
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not add text"];
+- (void) disconnect:(CDVInvokedUrlCommand *)command
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = nil;
+	if (printer_ == nil) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not disconnect printer, printer is nil"];
     } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
+		result = [printer_ disconnect];
+		if (result != EPOS2_SUCCESS) {
+			pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not disconnect printer"];
 
-- (void)addTextAlign:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    int result = [builder addTextAlign:[self getBuilderAlign:[self convertToInt:[command.arguments objectAtIndex:0]]]];
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not align text"];
-    } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
-- (void)addSymbol:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    int result = [builder addSymbol:[command.arguments objectAtIndex:0]
-                               Type:[self getSymbolType:[self convertToInt:[command.arguments objectAtIndex:1]]]
-                              Level:[self getSymbolLevel:[self convertToInt:[command.arguments objectAtIndex:2]]]
-                              Width:(long)[self convertToLong:[command.arguments objectAtIndex:3]]
-                             Height:(long)[self convertToLong:[command.arguments objectAtIndex:4]]
-                               Size:(long)[self convertToLong:[command.arguments objectAtIndex:5]]];
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not add symbol"];
-    } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
-- (void)addTextLang:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    int result = [builder addTextLang:[self getBuilderLanguage:[self convertToInt:[command.arguments objectAtIndex:0]]]];
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set language"];
-    } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
-- (void)addTextSmooth:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    int result = [builder addTextSmooth:(bool)[command.arguments objectAtIndex:0]];
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set smooth text"];
-    } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
-- (void)addFeedLine:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    int result = [builder addFeedLine:[self convertToInt:[command.arguments objectAtIndex:0]]];
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not add feed line"];
-    } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
-//(int)width Height:(int)height;
-- (void) addTextSize:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    int result = [builder addTextSize:[self convertToInt:[command.arguments objectAtIndex:0]] Height:[self convertToInt:[command.arguments objectAtIndex:1]]];
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set text size"];
-    } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
-//(int)reverse Ul:(int)ul Em:(int)em Color:(int)color;
-- (void) addTextStyle:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    int result = [builder addTextStyle:[self getBuilderStyle:[self convertToInt:[command.arguments objectAtIndex:0]]] Ul:[self getBuilderStyle:[self convertToInt:[command.arguments objectAtIndex:1]]] Em:[self getBuilderStyle:[self convertToInt:[command.arguments objectAtIndex:2]]] Color:[self getBuilderColor:[self convertToInt:[command.arguments objectAtIndex:0]]]];
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set text style"];
-    } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
-//(int)font;
-- (void) addTextFont:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    int result = [builder addTextFont:[self getBuilderFont:[self convertToInt:[command.arguments objectAtIndex:0]]]];
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not set text font"];
-    } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
-//(int)type;
-- (void) addCut:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    int result = [builder addCut:[self getBuilderType:[self convertToInt:[command.arguments objectAtIndex:0]]]];
-    if(result != EPOS_OC_SUCCESS){
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not cut"];
-    } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
-}
-
-- (void) sendToPrinter:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* plug;
-    unsigned long status = 0;
-    unsigned long battery = 0;
-    int result = [printer sendData:builder Timeout:SEND_TIMEOUT Status:&status Battery:&battery];
-    if(result != EPOS_OC_SUCCESS){
-        //try again, by getting the ip from prefs and rebuilding printer object
-        if (printer) {
-            [printer closePrinter];
-        }
-        NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];
-        NSString *ip = [prefs stringForKey:@"ip"];
-        int result2 = [printer openPrinter:printerType DeviceName:ip];
-        if(result2 != EPOS_OC_SUCCESS){
-            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not print"];
         } else {
-            result2 = [printer sendData:builder Timeout:SEND_TIMEOUT Status:&status Battery:&battery];
-            plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+			printerInitializingStatus = PRINTER_INIT_STATUS_NOT_INITIALIZED;
         }
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+	
+}
+- (void)startDiscovery:(CDVInvokedUrlCommand *)command
+
+{
+    CDVPluginResult* pluginResult = nil;
+	printerInitializingStatus = PRINTER_INIT_STATUS_INITIALIZING;
+	
+	filterOption_ = nil;
+	filterOption_ = [[Epos2FilterOption alloc] init];
+	filterOption_.deviceModel = EPOS2_MODEL_ALL;
+	filterOption_.deviceType = EPOS2_TYPE_PRINTER;
+
+	printerConnection = [[command.arguments objectAtIndex:0] integerValue];
+	if (printerConnection == 1) {
+		filterOption_.portType = EPOS2_PORTTYPE_BLUETOOTH;
+		
+	} else if (printerConnection == 0) {
+		filterOption_.portType = EPOS2_PORTTYPE_TCP;
+		filterOption_.broadcast = (NSString*) [command.arguments objectAtIndex:1];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was nil or invalid printer connection"];
+	}
+
+    int result = [Epos2Discovery start:filterOption_ delegate:self];
+    if (result != EPOS2_CODE_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Failed to start discovery for printer"];
+		
     } else {
-        plug = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    }
-    [self.commandDelegate sendPluginResult:plug callbackId:[command callbackId]];
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+   
     
 }
+- (void)stopDiscovery:(CDVInvokedUrlCommand *)command
 
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [Epos2Discovery stop];
+	if (result != EPOS2_CODE_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Failed to stop discovery for printer"];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)getConnection:(CDVInvokedUrlCommand *)command 
+{
+    CDVPluginResult* pluginResult = nil;
+	pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsInt: PRINTER_STATUS_CONNECTED];
+	if (printer_ == nil ) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt: PRINTER_STATUS_NULL_PRINTER];
+	}
+
+	if (printerInitializingStatus == PRINTER_INIT_STATUS_INITIALIZING) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt: PRINTER_STATUS_INITIALIZING];
+		[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+		return;
+	}
+	Epos2PrinterStatusInfo *status = [printer_ getStatus];
+	if([status getConnection] != EPOS2_TRUE) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt: PRINTER_STATUS_NOT_CONNECTED];
+	}
+	
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)getStatus:(CDVInvokedUrlCommand *)command 
+{
+    CDVPluginResult* pluginResult = nil;
+	pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsInt: PRINTER_STATUS_CONNECTED];
+	
+	if (printer_ == nil ) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt: PRINTER_STATUS_NULL_PRINTER];
+	}
+	if (printerInitializingStatus == PRINTER_INIT_STATUS_INITIALIZING) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt: PRINTER_STATUS_INITIALIZING];
+		[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+		return;
+	}
+
+	Epos2PrinterStatusInfo *status = [printer_ getStatus];
+	if([status getConnection] != EPOS2_TRUE) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt: PRINTER_STATUS_NOT_CONNECTED];
+	}
+	if([status getOnline] != EPOS2_TRUE) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt: PRINTER_STATUS_NOT_ONLINE];
+	}
+
+	if([status getBatteryLevel] == EPOS2_BATTERY_LEVEL_6) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt: PRINTER_STATUS_BATTERY_ERROR];
+	}
+
+	if([status getPaper] != EPOS2_PAPER_OK) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt: PRINTER_STATUS_PAPER_ERROR];
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void) onDiscovery:(Epos2DeviceInfo *)deviceInfo
+{
+	[printerList_ addObject:deviceInfo];
+    NSString *connectString = nil;
+    if (printerConnection == 1) {
+        connectString = [NSString stringWithFormat: @"BT:%@", [deviceInfo getBdAddress]];
+    }
+    else if (printerConnection == 0) {
+        connectString = [NSString stringWithFormat: @"TCP:%@", [deviceInfo getIpAddress]];
+    }
+    [printer_ connect:connectString timeout:EPOS2_PARAM_DEFAULT];
+	printerInitializingStatus = PRINTER_INIT_STATUS_CONNECTED;
+}
+
+- (void) connectWifi:(CDVInvokedUrlCommand *)command
+{
+	NSString *connectString = [NSString stringWithFormat: @"TCP:%@", [command.arguments objectAtIndex:0]];
+    [printer_ connect:connectString timeout:EPOS2_PARAM_DEFAULT];
+	
+}
+
+- (void) connect:(CDVInvokedUrlCommand *)command
+{
+    CDVPluginResult* pluginResult = nil;
+	printerConnection = [[command.arguments objectAtIndex:0] integerValue];
+	if (printerList_ == nil || [printerList_ count] == 0) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"No printer discovered to connect to"];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        return;
+	}
+	Epos2DeviceInfo* firstValidPrinter = (Epos2DeviceInfo *)[printerList_ objectAtIndex:0];
+
+	NSString *connectString = nil;
+    if (printerConnection == 1) {
+		connectString = [NSString stringWithFormat: @"BT:%@", [firstValidPrinter getBdAddress]];
+    }
+    else if (printerConnection == 0) {
+		connectString = [NSString stringWithFormat: @"TCP:%@", [firstValidPrinter getIpAddress]];
+    }
+    
+    
+    int result = [printer_ connect:connectString timeout:EPOS2_PARAM_DEFAULT];
+	if (result != EPOS2_CODE_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Failed to connect printer"];
+
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+	
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)beginTransaction:(CDVInvokedUrlCommand *)command
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ beginTransaction];
+    if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not being transaction for printer"];
+    } else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+- (void)endTransaction:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ endTransaction];
+    if (result != EPOS2_SUCCESS) {
+        printf("Could not end transaction");
+		return;
+    } else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)printData:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+	if (printer_ == nil) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Failed to print, printer is nil"];
+
+	}
+	int result = [printer_ sendData:EPOS2_PARAM_DEFAULT];
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not print"];
+
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void) addTextLang:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ addTextLang:EPOS2_LANG_EN];
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Fail to create receipt data"];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+- (void) addTextSmooth:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ addTextSmooth:(bool)[command.arguments objectAtIndex:0]];
+	if (result != EPOS2_SUCCESS) {
+		printf("Fail to create receipt data");
+		return;
+	}
+}
+
+- (void) addTextAlign:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ addTextAlign:EPOS2_ALIGN_CENTER];
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Fail to create receipt data"];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void) addTextFont:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ addTextFont:EPOS2_FONT_A];
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Fail to create receipt data"];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void) addSymbol:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+    int result = [printer_ addSymbol:[command.arguments objectAtIndex:0]
+							   type:EPOS2_SYMBOL_QRCODE_MODEL_2
+							  level:EPOS2_LEVEL_L
+							  width:(long)[[command.arguments objectAtIndex:3] integerValue]
+							 height:(long)[[command.arguments objectAtIndex:4] integerValue]
+							   size:(long)[[command.arguments objectAtIndex:5] integerValue]];
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Fail to create receipt data"];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void) addTextSize:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+    int result = [printer_ addTextSize:[[command.arguments objectAtIndex:0] longValue] height:[[command.arguments objectAtIndex:1] longValue]];
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Fail to create receipt data"];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void) addText:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ addText:[command.arguments objectAtIndex:0]];
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Fail to create receipt data"];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+
+- (void) addFeedLine:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ addFeedLine:[[command.arguments objectAtIndex:0] longValue]];
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Fail to create receipt data"];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void) addTextStyle:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ addTextStyle: [[command.arguments objectAtIndex:0] integerValue] 
+									ul: [[command.arguments objectAtIndex:1] integerValue] 
+									em: [[command.arguments objectAtIndex:2] integerValue] 
+									color: [[command.arguments objectAtIndex:3] integerValue]];
+
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Fail to create receipt data"];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void) addCut:(CDVInvokedUrlCommand *) command 
+{
+    CDVPluginResult* pluginResult = nil;
+	int result = [printer_ addCut: [[command.arguments objectAtIndex:0] integerValue]];
+
+	if (result != EPOS2_SUCCESS) {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Fail to create receipt data"];
+	} else {
+		pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+		
+	}
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
 @end
