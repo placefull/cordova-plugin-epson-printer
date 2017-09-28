@@ -1,0 +1,34 @@
+{
+  "name": "cordova-plugin-epson-printer",
+  "version": "0.0.2",
+  "description": "A plugin to interact with Epson EPOS printers.",
+  "cordova": {
+    "id": "cordova-plugin-epson-printer",
+    "platforms": [
+      "ios"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/placefull/cordova-plugin-epson-printer"
+  },
+  "bin": {
+    "cordova-app-preferences-generator": "bin/build-app-settings.js"
+  },
+  "devDependencies": {
+    "cordova": ">=5.4.1"
+  },
+  "keywords": [
+    "epson",
+	"printer",
+    "epos",
+    "ecosystem:cordova",
+    "cordova-ios"
+  ],
+  "author": "POSaBIT",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/placefull/cordova-plugin-epson-printer/issues"
+  },
+  "homepage": "https://github.com/placefull/cordova-plugin-epson-printer"
+}
