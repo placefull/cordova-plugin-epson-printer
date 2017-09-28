@@ -12,9 +12,6 @@
     "type": "git",
     "url": "https://github.com/placefull/cordova-plugin-epson-printer"
   },
-  "bin": {
-    "cordova-app-preferences-generator": "bin/build-app-settings.js"
-  },
   "devDependencies": {
     "cordova": ">=5.4.1"
   },
