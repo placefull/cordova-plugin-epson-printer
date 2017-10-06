@@ -32,6 +32,14 @@ exports.stopDiscovery = function (success, error) {
     cordova.exec(success, error, "EpsonPrinter", "stopDiscovery", []);
 };
 
+exports.saveIpAddress = function (arg0, success, error) {
+    cordova.exec(success, error, "EpsonPrinter", "saveIpAddress", [arg0]);
+};
+
+exports.saveMacAddress = function (arg0, success, error) {
+    cordova.exec(success, error, "EpsonPrinter", "saveMacAddress", [arg0]);
+};
+
 exports.getStatus = function (success, error) {
     cordova.exec(success, error, "EpsonPrinter", "getStatus", []);
 };
@@ -46,10 +54,6 @@ exports.printData = function (success, error) {
 
 exports.connect = function (arg0, success, error) {
     cordova.exec(success, error, "EpsonPrinter", "connect", [arg0]);
-};
-
-exports.connectWifi = function (ipAddress, success, error) {
-    cordova.exec(success, error, "EpsonPrinter", "connectWifi", [ipAddress]);
 };
 
 exports.beginTransaction = function (success, error) {
